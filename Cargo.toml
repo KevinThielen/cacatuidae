@@ -1,0 +1,9 @@
+[workspace]
+members = ["cac_renderer"]
+
+
+[profile.release]
+strip = "symbols"
+lto = true 
+codegen-units = 1 
+opt-level = "s"

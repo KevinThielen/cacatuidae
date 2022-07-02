@@ -2,9 +2,8 @@
 #![doc = include_str!("../README.md")]
 mod backend;
 mod error;
+mod mesh;
 mod renderer;
 
-/// The backends to pick
-pub use backend::{backends, RendererBackend};
-
+pub use mesh::Mesh;
 pub use renderer::Renderer;

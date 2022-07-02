@@ -1,10 +1,12 @@
-mod headless;
+use crate::Mesh;
 
-/// Provided backends
-///
-/// Alternatively, implement [RendererBackend] to create a custom backend.
+#[cfg(feature = "headless")]
+mod headless;
+#[cfg(feature = "opengl")]
+mod opengl;
+
 pub mod backends {
-    pub use super::headless::Headless;
+    //pub use super::headless::Headless;
 }
 
 /// Renderer Backend that is used by the [Renderer][crate::Renderer]
@@ -16,4 +18,8 @@ pub trait RendererBackend {
     /// It could be the version of the graphics API used, certain extensions, features
     /// or driver details.
     fn context_description(&self) -> String;
+
+    /// Creates a mesh on the graphics device
+    /// The Renderer will save it and keep track of a handle
+    fn create_mesh(&mut self) -> Option<&dyn Mesh>;
 }

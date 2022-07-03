@@ -5,10 +5,6 @@ mod headless;
 #[cfg(feature = "opengl")]
 mod opengl;
 
-pub mod backends {
-    //pub use super::headless::Headless;
-}
-
 /// Renderer Backend that is used by the [Renderer][crate::Renderer]
 ///
 /// Every graphics API needs to implement this trait.

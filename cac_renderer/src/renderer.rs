@@ -1,4 +1,4 @@
-use crate::backend::RendererBackend;
+use crate::{backend::RendererBackend, Color8};
 
 /// Renderer abstraction
 ///
@@ -13,6 +13,7 @@ use crate::backend::RendererBackend;
 
 pub struct Renderer {
     pub(crate) backend: Box<dyn RendererBackend>,
+    //draw_buckets: Vec<DrawBucket>,
 }
 
 impl Renderer {
@@ -77,7 +78,9 @@ impl Renderer {
     }
 
     /// Sets the clear color that is used by Self::clear()
-    pub fn clear_color(&self, color: (f32, f32, f32, f32)) {}
+    pub fn clear_color(&self, color: Color8) {
+        //TODO: clear color call to backend, or add it to the draw command buckets?
+    }
 
     /// Sends the sorted and batched draw commands to the backend.
     /// Potentially swaps the back and front buffer.

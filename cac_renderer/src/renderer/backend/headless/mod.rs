@@ -2,9 +2,11 @@
 
 use crate::Renderer;
 
-use self::mesh::Mesh;
+//use self::mesh::Mesh;
 
-mod mesh;
+//mod mesh;
+mod render_target;
+use render_target::RenderTarget;
 
 /// Headless Backend
 ///
@@ -13,13 +15,15 @@ mod mesh;
 /// This allows the renderer to run tests and miri without creating expensive graphics contexts or
 /// using sys calls.
 pub struct Headless {
-    meshes: Vec<Mesh>,
+    //meshes: Vec<Mesh>,
+    screen_target: RenderTarget,
 }
 
 impl Headless {
     pub(crate) fn new() -> Self {
         Self {
-            meshes: Vec::with_capacity(5),
+            //meshes: Vec::with_capacity(5),
+            screen_target: RenderTarget::default(),
         }
     }
 }
@@ -50,12 +54,16 @@ impl super::RendererBackend for Headless {
         "Headless Renderer".to_string()
     }
 
-    fn create_mesh(&mut self) -> Option<&dyn crate::Mesh> {
-        self.meshes.push(Mesh::new());
-        if let Some(v) = self.meshes.last() {
-            Some(v)
-        } else {
-            None
-        }
+    fn screen_target(&mut self) -> &mut dyn crate::RenderTarget {
+        &mut self.screen_target
     }
+
+    //fn create_mesh(&mut self) -> Option<&dyn crate::Mesh> {
+    //self.meshes.push(Mesh::new());
+    //if let Some(v) = self.meshes.last() {
+    //Some(v)
+    //} else {
+    //None
+    //}
+    //}
 }

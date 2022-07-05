@@ -1,4 +1,4 @@
-use crate::Mesh;
+use super::RenderTarget;
 
 #[cfg(feature = "headless")]
 mod headless;
@@ -17,5 +17,9 @@ pub trait RendererBackend {
 
     /// Creates a mesh on the graphics device
     /// The Renderer will save it and keep track of a handle
-    fn create_mesh(&mut self) -> Option<&dyn Mesh>;
+    //fn create_mesh(&mut self) -> Option<&dyn Mesh>;
+
+    fn screen_target(&mut self) -> &mut dyn RenderTarget;
+
+    fn update(&mut self) {}
 }

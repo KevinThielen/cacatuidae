@@ -1,4 +1,4 @@
-use cac_renderer::Renderer;
+use cac_renderer::{Color32, Renderer};
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
@@ -7,6 +7,11 @@ use winit::{
 };
 
 fn main() -> anyhow::Result<(), anyhow::Error> {
+    pretty_env_logger::env_logger::init_from_env(
+        pretty_env_logger::env_logger::Env::default()
+            .default_filter_or("hello_triangle,cac_renderer=trace"),
+    );
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("Example: Hello Triangle")
@@ -15,6 +20,9 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
         .build(&event_loop)?;
 
     let mut renderer = Renderer::new(&window).unwrap();
+    println!("{}", renderer.context_description());
+    let render_target = renderer.screen_target();
+    render_target.set_clear_color(Color32::DARK_JUNGLE_GREEN);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

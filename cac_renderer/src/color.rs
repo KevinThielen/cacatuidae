@@ -125,19 +125,37 @@ fn into_srgb(value: f32) -> f32 {
     }
 }
 impl Color32 {
+    // Default Colors
+    /// The Color Black (0.0, 0.0, 0.0)
+    pub const BLACK: Self = Self::from_rgb(0.0, 0.0, 0.0);
+    /// The Color Red (1.0, 0.0, 0.0)
+    pub const RED: Self = Self::from_rgb(1.0, 0.0, 0.0);
+    /// The Color Blue (0.0, 0.0, 1.0)
+    pub const BLUE: Self = Self::from_rgb(0.0, 0.0, 1.0);
+    /// The Color Green (0.0, 1.0, 0.0)
+    pub const GREEN: Self = Self::from_rgb(0.0, 1.0, 0.0);
+    /// The Color Yellow (1.0, 1.0, 0.0)
+    pub const YELLOW: Self = Self::from_rgb(1.0, 1.0, 0.0);
+    /// The Color White (1.0, 1.0, 1.0)
+    pub const WHITE: Self = Self::from_rgb(1.0, 1.0, 1.0);
+
+    /// Almost black with a touch of green
+    pub const DARK_JUNGLE_GREEN: Self = Self::from_rgb(0.102, 0.141, 0.129);
+    /// Grape like purple
+    pub const PERSIAN_INDIGO: Self = Self::from_rgb(0.20, 0.0, 0.30);
+    /// Dirty White
+    pub const GAINSBORO: Self = Self::from_rgb(0.79, 0.92, 0.87);
+    /// It's really nice to look at
+    pub const UNITY_YELLOW: Self = Self::from_rgb(1.0, 0.92, 0.016);
+
     /// Constructor using rgba in linear color space
     pub const fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
     /// Constructor using rgb in linear color space
-    pub fn from_rgb(r: f32, g: f32, b: f32) -> Self {
-        Self {
-            r,
-            g,
-            b,
-            ..Default::default()
-        }
+    pub const fn from_rgb(r: f32, g: f32, b: f32) -> Self {
+        Self { r, g, b, a: 1.0 }
     }
     /// Constructor using rgba in sRGB color space
     /// The struct converts and stores them into linear space.
@@ -163,9 +181,12 @@ impl Color32 {
         )
     }
 
+    /// returns the Color in sRGB space
     pub fn as_srgb(&self) -> (f32, f32, f32) {
         (into_srgb(self.r), into_srgb(self.g), into_srgb(self.b))
     }
+
+    /// returns the Color in sRGB space
     pub fn as_srgba(&self) -> (f32, f32, f32, f32) {
         (
             into_srgb(self.r),
@@ -180,6 +201,7 @@ impl Color32 {
         (self.r, self.g, self.b)
     }
 
+    /// returns the Color in linear space(as it is stored in the struct)
     pub fn as_rgba(&self) -> (f32, f32, f32, f32) {
         (self.r, self.g, self.b, self.a)
     }

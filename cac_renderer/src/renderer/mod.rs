@@ -1,4 +1,10 @@
-use crate::{backend::RendererBackend, Color8};
+mod backend;
+use backend::RendererBackend;
+
+mod mesh;
+
+mod render_target;
+pub use render_target::{ClearFlags, RenderTarget};
 
 /// Renderer abstraction
 ///
@@ -41,6 +47,8 @@ impl Renderer {
         cfg_if::cfg_if! {
         if #[cfg(all(feature="headless", test))]
         {
+            //get rid of unused warning because headless doesn't need a window_handle
+            let _ = window_handle;
             // There is nos reason to create a proper window or graphics context in the test cases
             // that are meant to run in a CI environment
             if let Ok(renderer) = Self::new_headless() {
@@ -53,7 +61,7 @@ impl Renderer {
             #[cfg(feature="vulkan")] {
             }
             #[cfg(feature="opengl")] {
-                if let Ok(renderer) = Self::new_opengl() {
+                if let Ok(renderer) = Self::new_opengl(window_handle) {
                     return Ok(renderer);
                 }
             }
@@ -71,44 +79,40 @@ impl Renderer {
         renderer
     }
 
+    /// Returns the screen as render target.
+    pub fn screen_target(&mut self) -> &mut dyn RenderTarget {
+        self.backend.screen_target()
+    }
+
     /// Prints a description of the context, including the version of the graphics library, driver
     /// information, etc.
     pub fn context_description(&self) -> String {
         self.backend.context_description()
     }
 
-    /// Sets the clear color that is used by Self::clear()
-    pub fn clear_color(&self, color: Color8) {
-        //TODO: clear color call to backend, or add it to the draw command buckets?
-    }
-
     /// Sends the sorted and batched draw commands to the backend.
     /// Potentially swaps the back and front buffer.
-    pub fn update(&mut self) {}
-
-    /// Create a Mesh out of MeshBuffers
-    pub fn create_mesh(&mut self, mesh_buffers: &[u8]) -> Result<&dyn crate::Mesh, String> {
-        self.backend.create_mesh().ok_or_else(|| "Fuck".to_string())
+    pub fn update(&mut self) {
+        self.backend.update()
     }
+
+    // Create a Mesh out of MeshBuffers
+    //pub fn create_mesh(&mut self, mesh_buffers: &[u8]) -> Result<&dyn Mesh, String> {
+    //self.backend.create_mesh().ok_or_else(|| "Fuck".to_string())
+    //}
 }
 
 #[cfg(test)]
 mod test {
+    use crate::Color32;
+
     use super::*;
 
-    // Placeholder
-    struct HeadlessWindow {}
-    unsafe impl raw_window_handle::HasRawWindowHandle for HeadlessWindow {
-        fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
-            panic!("Trying to get the raw window handle of an Headlesswindow")
-        }
-    }
-
     #[test]
-    fn create_mesh() {
-        let mut renderer = Renderer::new(&HeadlessWindow {}).unwrap();
-        let mesh = renderer.create_mesh(&[]);
+    fn clear_screen() {
+        let mut renderer = Renderer::new_headless().unwrap();
 
-        assert!(mesh.is_ok())
+        let target = renderer.screen_target();
+        target.set_clear_color(Color32::from_rgb(0.2, 0.3, 0.8));
     }
 }

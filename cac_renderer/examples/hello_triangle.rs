@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
         .build(&event_loop)?;
 
     let mut renderer = Renderer::new(&window).unwrap();
-    println!("{}", renderer.context_description());
+    log::info!("{}", renderer.context_description());
     let render_target = renderer.screen_target();
     render_target.set_clear_color(Color32::DARK_JUNGLE_GREEN);
 

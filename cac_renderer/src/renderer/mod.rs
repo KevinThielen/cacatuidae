@@ -6,6 +6,8 @@ mod mesh;
 mod render_target;
 pub use render_target::{ClearFlags, RenderTarget};
 
+use crate::RendererError;
+
 /// Renderer abstraction
 ///
 /// Provides a high level API for the graphics backends. The backend can be chosen dynamically,
@@ -41,8 +43,8 @@ impl Renderer {
 
     pub fn new(
         window_handle: &impl raw_window_handle::HasRawWindowHandle,
-    ) -> Result<Renderer, String> {
-        let renderer = Err("No matching default backend available".to_string());
+    ) -> Result<Renderer, RendererError> {
+        let renderer = Err(RendererError::NoAvailableBackend);
 
         cfg_if::cfg_if! {
         if #[cfg(all(feature="headless", test))]
@@ -61,8 +63,13 @@ impl Renderer {
             #[cfg(feature="vulkan")] {
             }
             #[cfg(feature="opengl")] {
-                if let Ok(renderer) = Self::new_opengl(window_handle) {
-                    return Ok(renderer);
+                match Self::new_opengl(window_handle, (4, 5)) {
+                  Ok(renderer) => return Ok(renderer),
+                  Err(e) => log::warn!("Couldn't create preferred Context [OpenGL 4.5 Core]: {e}"),
+                }
+                match Self::new_opengl(window_handle, (3, 3)) {
+                  Ok(renderer) => return Ok(renderer),
+                  Err(e) => log::warn!("Couldn't create Fallback Context [OpenGL 3.3 Core]: {e}"),
                 }
             }
             #[cfg(feature="headless")] {

@@ -2,7 +2,7 @@ use std::ffi::CStr;
 
 use render_target::ScreenTarget;
 
-use crate::RenderTarget;
+use crate::{RenderTarget, RendererError};
 
 mod render_target;
 
@@ -15,12 +15,15 @@ impl crate::Renderer {
     /// Creates a renderer using the OpenGL backend.
     /// By default, it will try to create a 3.3 or newer Core Context.
     /// It will also set the debug callbacks in debug builds
-    pub fn new_opengl(window: &impl raw_window_handle::HasRawWindowHandle) -> Result<Self, String> {
+    pub fn new_opengl(
+        window: &impl raw_window_handle::HasRawWindowHandle,
+        version: (u8, u8),
+    ) -> Result<Self, RendererError> {
         let context = raw_gl_context::GlContext::create(
             window,
             raw_gl_context::GlConfig {
                 alpha_bits: 0,
-                version: (3, 3),
+                version,
                 profile: raw_gl_context::Profile::Core,
                 ..Default::default()
             },
@@ -28,7 +31,17 @@ impl crate::Renderer {
 
         let context = match context {
             Ok(context) => context,
-            Err(_e) => return Err("failed to create context".to_string()),
+            Err(gl_error) => {
+                let message = match gl_error {
+                    raw_gl_context::GlError::InvalidWindowHandle => "InvalidWindowHandle",
+                    raw_gl_context::GlError::VersionNotSupported => "VersionNotSupported",
+                    raw_gl_context::GlError::CreationFailed => "CreationFailed",
+                };
+
+                return Err(RendererError::FailedToCreateContext {
+                    error: message.to_string(),
+                });
+            }
         };
 
         context.make_current();
@@ -42,7 +55,7 @@ impl crate::Renderer {
                 gl::DebugMessageCallback(Some(debug_callback), std::ptr::null());
             }
         } else {
-            log::error!("NOT LOADED!")
+            log::warn!("DebugMessageCallback is not loaded!")
         }
 
         let backend = OpenGLRenderer {

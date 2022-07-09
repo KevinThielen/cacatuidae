@@ -21,8 +21,14 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
 
     let mut renderer = Renderer::new(&window).unwrap();
     log::info!("{}", renderer.context_description());
+
     let render_target = renderer.screen_target();
     render_target.set_clear_color(Color32::DARK_JUNGLE_GREEN);
+
+    //let [meshbuffer] = MeshBuffer::with_position_uv(data);
+    //let [meshbuffer] = MeshBuffer::with_position_uv_and_color(data, data2);
+
+    //let mesh_handle = renderer.create_mesh([MeshBuffer]);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

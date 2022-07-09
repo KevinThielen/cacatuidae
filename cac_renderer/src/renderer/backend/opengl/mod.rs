@@ -2,13 +2,17 @@ use std::ffi::CStr;
 
 use render_target::ScreenTarget;
 
-use crate::{RenderTarget, RendererError};
+use crate::{generation_vec::GenerationVec, Handle, RenderTarget, RendererError};
 
+mod mesh;
 mod render_target;
+
+use mesh::Mesh;
 
 struct OpenGLRenderer {
     context: raw_gl_context::GlContext,
     screen_target: ScreenTarget,
+    meshes: GenerationVec<Handle<Mesh>>,
 }
 
 impl crate::Renderer {
@@ -61,6 +65,7 @@ impl crate::Renderer {
         let backend = OpenGLRenderer {
             context,
             screen_target: ScreenTarget::default(),
+            meshes: GenerationVec::with_capacity(10),
         };
 
         Ok(Self {
@@ -96,6 +101,10 @@ impl super::RendererBackend for OpenGLRenderer {
         self.screen_target.clear();
 
         self.context.swap_buffers();
+    }
+
+    fn create_mesh(&mut self) -> Result<&mut dyn crate::Mesh, RendererError> {
+        todo!()
     }
 }
 

@@ -1,7 +1,9 @@
 mod backend;
+
 use backend::RendererBackend;
 
 mod mesh;
+pub use mesh::Mesh;
 
 mod render_target;
 pub use render_target::{ClearFlags, RenderTarget};
@@ -21,6 +23,7 @@ use crate::RendererError;
 
 pub struct Renderer {
     pub(crate) backend: Box<dyn RendererBackend>,
+    //meshes: GenerationVec<MeshHandle, Mesh>,
     //draw_buckets: Vec<DrawBucket>,
 }
 
@@ -43,7 +46,7 @@ impl Renderer {
 
     pub fn new(
         window_handle: &impl raw_window_handle::HasRawWindowHandle,
-    ) -> Result<Renderer, RendererError> {
+    ) -> Result<Self, RendererError> {
         let renderer = Err(RendererError::NoAvailableBackend);
 
         cfg_if::cfg_if! {
@@ -103,9 +106,8 @@ impl Renderer {
         self.backend.update()
     }
 
-    // Create a Mesh out of MeshBuffers
-    //pub fn create_mesh(&mut self, mesh_buffers: &[u8]) -> Result<&dyn Mesh, String> {
-    //self.backend.create_mesh().ok_or_else(|| "Fuck".to_string())
+    //pub fn create_mesh<T>(&mut self, mesh_buffers: &[T]) -> Result<Handle<Mesh>, RendererError> {
+    //self.backend.create_mesh(mesh_buffers)
     //}
 }
 
@@ -116,10 +118,11 @@ mod test {
     use super::*;
 
     #[test]
-    fn clear_screen() {
+    fn create_mesh() {
         let mut renderer = Renderer::new_headless().unwrap();
+        const VERTICES: [f32; 9] = [0.0; 9];
 
-        let target = renderer.screen_target();
-        target.set_clear_color(Color32::from_rgb(0.2, 0.3, 0.8));
+        //let mesh_handle = renderer.create_mesh(&VERTICES).unwrap();
+        //assert_eq!(renderer.meshes.len(), 1);
     }
 }

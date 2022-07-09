@@ -1,4 +1,6 @@
-use super::RenderTarget;
+use crate::RendererError;
+
+use super::{Mesh, RenderTarget};
 
 #[cfg(feature = "headless")]
 mod headless;
@@ -20,6 +22,8 @@ pub trait RendererBackend {
     //fn create_mesh(&mut self) -> Option<&dyn Mesh>;
 
     fn screen_target(&mut self) -> &mut dyn RenderTarget;
+
+    fn create_mesh(&mut self) -> Result<&mut dyn Mesh, RendererError>;
 
     fn update(&mut self) {}
 }

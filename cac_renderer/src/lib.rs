@@ -7,4 +7,7 @@ mod error;
 pub use error::RendererError;
 
 mod renderer;
-pub use renderer::{ClearFlags, RenderTarget, Renderer};
+pub use renderer::{ClearFlags, Mesh, RenderTarget, Renderer};
+
+mod generation_vec;
+pub use generation_vec::Handle;

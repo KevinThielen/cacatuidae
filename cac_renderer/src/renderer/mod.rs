@@ -8,6 +8,9 @@ pub use mesh::Mesh;
 mod render_target;
 pub use render_target::{ClearFlags, RenderTarget};
 
+mod mesh_buffer;
+pub use mesh_buffer::MeshBuffer;
+
 use crate::RendererError;
 
 /// Renderer abstraction
@@ -106,7 +109,10 @@ impl Renderer {
         self.backend.update()
     }
 
-    //pub fn create_mesh<T>(&mut self, mesh_buffers: &[T]) -> Result<Handle<Mesh>, RendererError> {
+    //pub fn create_mesh<T>(
+    //&mut self,
+    //mesh_buffers: &[MeshBuffer],
+    //) -> Result<Handle<Mesh>, RendererError> {
     //self.backend.create_mesh(mesh_buffers)
     //}
 }

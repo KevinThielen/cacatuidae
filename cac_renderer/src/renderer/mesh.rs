@@ -1,3 +1,2 @@
-pub trait Mesh {
-    fn get_id(&self) -> u32;
-}
+/// Trait that exposes operations to the native graphics resource
+pub trait Mesh {}

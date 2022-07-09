@@ -28,8 +28,4 @@ impl Drop for Mesh {
     }
 }
 
-impl crate::Mesh for Mesh {
-    fn get_id(&self) -> u32 {
-        self.id
-    }
-}
+impl crate::Mesh for Mesh {}

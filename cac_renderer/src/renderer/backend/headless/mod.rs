@@ -1,9 +1,8 @@
 #![cfg(feature = "headless")]
 
-use crate::Renderer;
+use crate::{Handle, Renderer};
 
 mod mesh;
-use self::mesh::Mesh;
 
 mod render_target;
 use render_target::RenderTarget;
@@ -15,14 +14,12 @@ use render_target::RenderTarget;
 /// This allows the renderer to run tests and miri without creating expensive graphics contexts or
 /// using sys calls.
 pub struct Headless {
-    meshes: Vec<Mesh>,
     screen_target: RenderTarget,
 }
 
 impl Headless {
     pub(crate) fn new() -> Self {
         Self {
-            meshes: Vec::with_capacity(5),
             screen_target: RenderTarget::default(),
         }
     }
@@ -58,8 +55,18 @@ impl super::RendererBackend for Headless {
         &mut self.screen_target
     }
 
-    fn create_mesh(&mut self) -> Result<&mut dyn crate::renderer::Mesh, crate::RendererError> {
-        self.meshes.push(Mesh::new());
-        Ok(&mut self.meshes[0])
+    fn create_buffer(
+        &mut self,
+        _buffer: crate::BufferData,
+        _usage: crate::BufferUsage,
+    ) -> Result<Handle<crate::Buffer>, crate::RendererError> {
+        todo!()
+    }
+
+    fn create_vertex_layout(
+        &mut self,
+        _buffer_attributes: &[crate::renderer::buffer::BufferAttributes],
+    ) -> Result<Handle<crate::renderer::buffer::VertexLayout>, crate::RendererError> {
+        todo!()
     }
 }

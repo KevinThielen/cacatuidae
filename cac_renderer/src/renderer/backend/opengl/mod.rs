@@ -1,25 +1,69 @@
 use std::ffi::CStr;
 
+use gl::types::GLenum;
 use render_target::ScreenTarget;
 
-use crate::{generation_vec::GenerationVec, Handle, RenderTarget, RendererError};
+use crate::{
+    generation_vec::GenerationVec,
+    renderer::{vertex_layout::VertexLayout, Shader, ShaderProgram},
+    Buffer, Mesh, Primitive, RenderTarget, Renderer, RendererError,
+};
 
 mod mesh;
 mod render_target;
 
-use mesh::Mesh;
+mod vertex_array;
+use vertex_array::Vao;
 
-struct OpenGLRenderer {
+mod buffer;
+use buffer::GLBuffer;
+
+mod shader;
+use shader::GLShader;
+
+mod shader_program;
+use shader_program::GLShaderProgram;
+
+use super::Context;
+
+pub struct OpenGLContext {
     context: raw_gl_context::GlContext,
     screen_target: ScreenTarget,
-    meshes: GenerationVec<Handle<Mesh>>,
+
+    mesh_to_draw: Option<Mesh>,
 }
 
-impl crate::Renderer {
-    /// Creates a renderer using the OpenGL backend.
-    /// By default, it will try to create a 3.3 or newer Core Context.
-    /// It will also set the debug callbacks in debug builds
-    pub fn new_opengl(
+impl Renderer<OpenGLContext> {
+    pub fn new(
+        window: &impl raw_window_handle::HasRawWindowHandle,
+        version: (u8, u8),
+    ) -> Result<Self, RendererError> {
+        let context = OpenGLContext::new(window, version)?;
+
+        Ok(Self {
+            context,
+            buffers: GenerationVec::with_capacity(10),
+            layouts: GenerationVec::with_capacity(5),
+            shaders: GenerationVec::with_capacity(10),
+            programs: GenerationVec::with_capacity(5),
+        })
+    }
+}
+
+impl From<Primitive> for GLenum {
+    fn from(primitive: Primitive) -> Self {
+        match primitive {
+            Primitive::Triangles => gl::TRIANGLES,
+            Primitive::TriangleStrip => gl::TRIANGLE_STRIP,
+            Primitive::Lines => gl::LINES,
+            Primitive::LineStrip => gl::LINE_STRIP,
+            Primitive::Points => gl::POINTS,
+        }
+    }
+}
+
+impl OpenGLContext {
+    pub fn new(
         window: &impl raw_window_handle::HasRawWindowHandle,
         version: (u8, u8),
     ) -> Result<Self, RendererError> {
@@ -62,19 +106,35 @@ impl crate::Renderer {
             log::warn!("DebugMessageCallback is not loaded!")
         }
 
-        let backend = OpenGLRenderer {
+        Ok(OpenGLContext {
             context,
             screen_target: ScreenTarget::default(),
-            meshes: GenerationVec::with_capacity(10),
-        };
-
-        Ok(Self {
-            backend: Box::new(backend),
+            mesh_to_draw: None,
         })
     }
 }
 
-impl super::RendererBackend for OpenGLRenderer {
+impl Context for OpenGLContext {
+    type Context = Self;
+    type BufferStorage = GenerationVec<Buffer, GLBuffer>;
+    type LayoutStorage = GenerationVec<VertexLayout, Vao>;
+    type ShaderStorage = GenerationVec<Shader, GLShader>;
+    type ProgramStorage = GenerationVec<ShaderProgram, GLShaderProgram>;
+}
+
+impl crate::Renderer<OpenGLContext> {
+    /// Creates a renderer using the OpenGL backend.
+    /// By default, it will try to create a 3.3 or newer Core Context.
+    /// It will also set the debug callbacks in debug builds
+    pub fn new_opengl(
+        window: &impl raw_window_handle::HasRawWindowHandle,
+        version: (u8, u8),
+    ) -> Result<Self, RendererError> {
+        Self::new(window, version)
+    }
+}
+
+impl super::Backend for Renderer<OpenGLContext> {
     fn context_description(&self) -> String {
         let vendor = unsafe { CStr::from_ptr(gl::GetString(gl::VENDOR) as *const i8) }
             .to_string_lossy()
@@ -94,17 +154,41 @@ impl super::RendererBackend for OpenGLRenderer {
     }
 
     fn screen_target(&mut self) -> &mut dyn crate::RenderTarget {
-        &mut self.screen_target
+        &mut self.context.screen_target
+    }
+
+    fn draw(&mut self, mesh: crate::Mesh) {
+        self.context.mesh_to_draw = Some(mesh);
     }
 
     fn update(&mut self) {
-        self.screen_target.clear();
+        self.context.screen_target.clear();
+        if let Some(mesh_to_draw) = &self.context.mesh_to_draw {
+            if let Some(vertex_array) = self.layouts.get_mut(mesh_to_draw.vertex_layout) {
+                vertex_array.bind();
 
-        self.context.swap_buffers();
-    }
-
-    fn create_mesh(&mut self) -> Result<&mut dyn crate::Mesh, RendererError> {
-        todo!()
+                if vertex_array.has_indices {
+                    let start_index = mesh_to_draw.start_index as i32;
+                    unsafe {
+                        gl::DrawElements(
+                            mesh_to_draw.primitive.into(),
+                            mesh_to_draw.count as i32,
+                            gl::UNSIGNED_BYTE,
+                            start_index as *const i32 as *const std::ffi::c_void,
+                        );
+                    }
+                } else {
+                    unsafe {
+                        gl::DrawArrays(
+                            mesh_to_draw.primitive.into(),
+                            mesh_to_draw.start_index as i32,
+                            mesh_to_draw.count as i32,
+                        );
+                    }
+                }
+            }
+        }
+        self.context.context.swap_buffers();
     }
 }
 

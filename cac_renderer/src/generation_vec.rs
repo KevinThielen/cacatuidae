@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 /// Resource handle that is returned by the [Renderer] whenever a graphics resource, like a mesh,
 /// shader or texture is created. It is similar to a normal Vec, with the difference that it
 /// carries the generation data, in case a resource is released and another take the spot.
-pub struct Handle<T> {
+pub struct Handle<T: Copy> {
     pub(crate) index: usize,
     pub(crate) generation: usize,
     phantom: PhantomData<T>,
@@ -17,23 +17,23 @@ struct Resource<R> {
 }
 
 #[derive(Debug)]
-pub(crate) struct GenerationVec<V> {
+pub struct GenerationVec<K: Copy, V> {
     values: Vec<Resource<V>>,
     free: Vec<usize>,
-    //phantom: PhantomData<K>,
+    phantom: PhantomData<K>,
 }
 
-impl<V> Default for GenerationVec<V> {
+impl<K: Copy, V> Default for GenerationVec<K, V> {
     fn default() -> Self {
         Self {
             values: Vec::with_capacity(10),
             free: Vec::with_capacity(10),
-            //phantom: PhantomData,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<V> GenerationVec<V> {
+impl<K: Copy, V> GenerationVec<K, V> {
     /// Constructor
     pub fn new() -> Self {
         Self::default()
@@ -44,13 +44,13 @@ impl<V> GenerationVec<V> {
         Self {
             values: Vec::with_capacity(capacity),
             free: Vec::with_capacity(capacity),
-            //phantom: PhantomData,
+            phantom: PhantomData,
         }
     }
 
     /// Removes the resource from the GenerationVec and pushes its index into the free list.
     /// The freelist will take the last entry as the index for a new value.
-    pub fn remove(&mut self, handle: Handle<V>) {
+    pub fn remove(&mut self, handle: Handle<K>) {
         if let Some(resource) = self.values.get_mut(handle.index) {
             if resource.generation == handle.generation {
                 resource.value = None;
@@ -61,7 +61,7 @@ impl<V> GenerationVec<V> {
 
     /// Returns an immutable reference to the value associated with the handle, or None if there is
     /// none.
-    pub fn get(&self, handle: Handle<V>) -> Option<&V> {
+    pub fn get(&self, handle: Handle<K>) -> Option<&V> {
         self.values
             .get(handle.index)
             .filter(|r| r.generation == handle.generation)
@@ -70,7 +70,7 @@ impl<V> GenerationVec<V> {
 
     /// Returns a mutable reference to the value associated with the handle, or None if there is
     /// none.
-    pub fn get_mut(&mut self, handle: Handle<V>) -> Option<&mut V> {
+    pub fn get_mut(&mut self, handle: Handle<K>) -> Option<&mut V> {
         self.values
             .get_mut(handle.index)
             .filter(|r| r.generation == handle.generation)
@@ -80,7 +80,7 @@ impl<V> GenerationVec<V> {
     /// Updates the value the handle is refering to, without invalidating existing handles to it.
     /// It shouldn't be used to create entire different values, but rather change the existing one
     /// while keeping the same meaning.
-    pub fn update(&mut self, handle: Handle<V>) -> Option<&mut V> {
+    pub fn update(&mut self, handle: Handle<K>) -> Option<&mut V> {
         self.values.get_mut(handle.index).and_then(|resource| {
             if resource.generation == handle.generation {
                 resource.value.as_mut()
@@ -91,14 +91,14 @@ impl<V> GenerationVec<V> {
     }
 
     /// Pushes a value into the GenerationVec and returns a handle to it.
-    pub fn push(&mut self, value: V) -> Handle<V> {
+    pub fn push(&mut self, value: V) -> Handle<K> {
         let index = self.free.pop().unwrap_or(self.values.len());
 
         if let Some(resource) = self.values.get_mut(index) {
             resource.value = Some(value);
             resource.generation += 1;
 
-            Handle::<V> {
+            Handle::<K> {
                 index,
                 generation: resource.generation,
                 phantom: PhantomData,
@@ -111,7 +111,7 @@ impl<V> GenerationVec<V> {
 
             self.values.insert(index, resource);
 
-            Handle::<V> {
+            Handle::<K> {
                 index,
                 generation: 0,
                 phantom: PhantomData,
@@ -134,7 +134,7 @@ mod test {
 
     #[test]
     fn clear() {
-        let mut gen_vec = GenerationVec::with_capacity(2);
+        let mut gen_vec: GenerationVec<usize, i32> = GenerationVec::with_capacity(2);
         gen_vec.push(1);
         gen_vec.push(2);
         let to_be_removed = gen_vec.push(3);
@@ -159,7 +159,7 @@ mod test {
 
     #[test]
     fn insert() {
-        let mut gen_vec = GenerationVec::with_capacity(2);
+        let mut gen_vec: GenerationVec<usize, &str> = GenerationVec::with_capacity(2);
         let some_resource = "farty";
         let handle = gen_vec.push(some_resource);
 
@@ -179,7 +179,7 @@ mod test {
 
     #[test]
     fn recycle_index() {
-        let mut gen_vec = GenerationVec::with_capacity(2);
+        let mut gen_vec: GenerationVec<usize, &str> = GenerationVec::with_capacity(2);
         let some_resource = "farty";
         let handle = gen_vec.push(some_resource);
 
@@ -199,7 +199,7 @@ mod test {
 
     #[test]
     fn update_value() {
-        let mut gen_vec = GenerationVec::with_capacity(2);
+        let mut gen_vec: GenerationVec<usize, &str> = GenerationVec::with_capacity(2);
         let some_resource = "farty";
         let handle = gen_vec.push(some_resource);
 

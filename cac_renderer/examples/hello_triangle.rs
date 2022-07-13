@@ -1,10 +1,38 @@
-use cac_renderer::{Color32, Renderer};
+use std::time::Instant;
+
+use cac_renderer::{
+    AttributeSemantic::{Color, Position},
+    Backend, BufferAttributes, BufferStorage, BufferUsage, ClearFlags, Color32, FrameTimer,
+    LayoutStorage, Mesh, ProgramStorage, Renderer, ShaderStorage, VertexAttribute,
+};
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+
+const VS_SOURCE: &str = r##"
+            #version 450
+            layout(location = 0) in vec3 pos;
+            layout(location = 5)  in vec4 color;
+
+            out vec3 frag_color;
+            void main() 
+            {
+                frag_color = color.xyz;
+                gl_Position = vec4(pos, 1.0);
+            }"##;
+
+const FS_SOURCE: &str = r##"
+            #version 450
+            out vec4 result;
+
+            in vec3 frag_color;
+            void main() 
+            {
+                result = vec4(frag_color, 1.0);
+            }"##;
 
 fn main() -> anyhow::Result<(), anyhow::Error> {
     pretty_env_logger::env_logger::init_from_env(
@@ -19,23 +47,107 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
         .with_inner_size(LogicalSize::new(1024, 768))
         .build(&event_loop)?;
 
-    let mut renderer = Renderer::new(&window).unwrap();
+    let mut renderer = Renderer::new(&window, (4, 5))?;
     log::info!("{}", renderer.context_description());
 
     let render_target = renderer.screen_target();
     render_target.set_clear_color(Color32::DARK_JUNGLE_GREEN);
+    render_target.set_clear_flags(ClearFlags::COLOR);
 
-    //let [meshbuffer] = MeshBuffer::with_position_uv(data);
-    //let [meshbuffer] = MeshBuffer::with_position_uv_and_color(data, data2);
+    #[repr(C)]
+    struct Vertex {
+        position: (f32, f32, f32),
+        color: (f32, f32, f32, f32),
+    }
 
-    //let mesh_handle = renderer.create_mesh([MeshBuffer]);
+    impl Vertex {
+        const fn new(x: f32, y: f32, z: f32) -> Self {
+            Self {
+                position: (x, y, z),
+                color: (1.0, 1.0, 0.0, 0.0),
+            }
+        }
+    }
 
+    #[rustfmt::skip]
+    const VERTICES: [Vertex; 4] = [
+        Vertex::new( -0.5, -0.5, 0.0),  // bottom left
+        Vertex::new( -0.5,  0.5, 0.0),  // top left
+        Vertex::new(  0.5,  0.5, 0.0),  // top right
+        Vertex::new(  0.5, -0.5, 0.0),   // bottom right
+    ];
+
+    const INDICES: [u8; 6] = [0, 1, 2, 3, 0, 1];
+
+    // Can either pass in a float array or just convert a packed struct into raw data.
+    // TODO: test with u8
+    let vertex_data = unsafe { std::slice::from_raw_parts(VERTICES.as_ptr() as *const f32, 28) };
+
+    let buffers = &mut renderer.buffers;
+    let vertex_buffer = buffers.new_vertex(vertex_data, BufferUsage::StaticRead)?;
+    let index_buffer = buffers.new_index(&INDICES, BufferUsage::StaticRead)?;
+
+    let ibo = buffers.get(index_buffer).unwrap();
+
+    let vertex_layout = renderer.layouts.new(&[
+        BufferAttributes {
+            buffer: buffers.get(vertex_buffer).unwrap(),
+            attributes: &[
+                VertexAttribute {
+                    stride: std::mem::size_of::<Vertex>(),
+                    semantic: Position,
+                    normalized: false,
+                    offset: 0,
+                },
+                VertexAttribute {
+                    stride: std::mem::size_of::<Vertex>(),
+                    semantic: Color(0),
+                    normalized: false,
+                    offset: std::mem::size_of::<f32>() * 3,
+                },
+            ],
+            offset: 0,
+        },
+        BufferAttributes {
+            buffer: ibo,
+            attributes: &[],
+            offset: 0,
+        },
+    ])?;
+    let mut triangle_mesh = Mesh {
+        vertex_layout,
+        start_index: 0,
+        count: 3,
+        primitive: cac_renderer::Primitive::Triangles,
+    };
+
+    let vs = renderer.shaders.new_vertex(VS_SOURCE)?;
+    let fs = renderer.shaders.new_fragment(FS_SOURCE)?;
+
+    let vertex_shader = renderer.shaders.get(vs).unwrap();
+    let fragment_shader = renderer.shaders.get(fs).unwrap();
+
+    let program = renderer
+        .programs
+        .new_program(vertex_shader, fragment_shader)?;
+
+    renderer.draw(triangle_mesh);
+
+    let mut timer = FrameTimer::with_repeated(0.5);
+    let mut now = Instant::now();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
         match event {
             Event::MainEventsCleared => {
                 //render
+                if timer.tick_done() {
+                    triangle_mesh.start_index += 1;
+                    if triangle_mesh.start_index >= 4 {
+                        triangle_mesh.start_index = 0;
+                    }
+                    renderer.draw(triangle_mesh);
+                }
                 renderer.update();
             }
             Event::WindowEvent {

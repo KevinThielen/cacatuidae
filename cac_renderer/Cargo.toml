@@ -28,6 +28,6 @@ pretty_env_logger = "0.4"
 
 
 [features] 
-default = ["headless", "opengl"]
+default = ["opengl"]
 headless = []
 opengl = ["gl", "raw-gl-context"]

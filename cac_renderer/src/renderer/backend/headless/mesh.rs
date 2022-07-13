@@ -27,5 +27,3 @@ impl Drop for Mesh {
         }
     }
 }
-
-impl crate::Mesh for Mesh {}

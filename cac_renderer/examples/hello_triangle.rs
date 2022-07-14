@@ -1,9 +1,11 @@
 use std::time::Instant;
 
 use cac_renderer::{
+    mat2, vec2, vec3, vec4,
     AttributeSemantic::{Color, Position},
     Backend, BufferAttributes, BufferStorage, BufferUsage, ClearFlags, Color32, FrameTimer,
-    LayoutStorage, Mesh, ProgramStorage, Renderer, ShaderStorage, VertexAttribute,
+    LayoutStorage, MaterialProperty, Mesh, ProgramStorage, PropertyId, PropertyValue, Renderer,
+    ShaderStorage, VertexAttribute,
 };
 use winit::{
     dpi::LogicalSize,
@@ -17,6 +19,7 @@ const VS_SOURCE: &str = r##"
             layout(location = 0) in vec3 pos;
             layout(location = 5)  in vec4 color;
 
+
             out vec3 frag_color;
             void main() 
             {
@@ -28,10 +31,13 @@ const FS_SOURCE: &str = r##"
             #version 450
             out vec4 result;
 
+            uniform vec4 color[3];
+            uniform mat2 tint;
+
             in vec3 frag_color;
             void main() 
             {
-                result = vec4(frag_color, 1.0);
+                result = vec4(color[0].a, color[1].g, tint[1][1], 1.0);
             }"##;
 
 fn main() -> anyhow::Result<(), anyhow::Error> {
@@ -133,8 +139,20 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
 
     renderer.draw(triangle_mesh);
 
+    let material = renderer.create_material(
+        program,
+        &[
+            MaterialProperty::new(
+                "color",
+                &[vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 0.0)],
+            ),
+            MaterialProperty::new("tint", &[mat2(vec2(0.0, 1.0), vec2(1.0, 1.0))]),
+        ],
+    )?;
+
+    renderer.use_material(material);
+
     let mut timer = FrameTimer::with_repeated(0.5);
-    let mut now = Instant::now();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 

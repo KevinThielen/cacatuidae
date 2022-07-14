@@ -46,6 +46,7 @@ impl Renderer<OpenGLContext> {
             layouts: GenerationVec::with_capacity(5),
             shaders: GenerationVec::with_capacity(10),
             programs: GenerationVec::with_capacity(5),
+            materials: GenerationVec::with_capacity(10),
         })
     }
 }

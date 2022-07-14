@@ -1,4 +1,4 @@
-use crate::AttributeSemantic;
+use crate::{renderer::PropertyId, AttributeSemantic};
 
 #[derive(Debug)]
 /// Possible Errors returned by the Renderer.
@@ -30,6 +30,9 @@ pub enum RendererError {
     FailedToLinkProgram {
         error: String,
     },
+    UniformNotFound {
+        property: String,
+    },
 }
 
 impl std::error::Error for RendererError {}
@@ -58,6 +61,9 @@ impl std::fmt::Display for RendererError {
             }
             RendererError::FailedToLinkProgram { error } => {
                 write!(f, "Failed to link shaderprogram: {error}")
+            }
+            RendererError::UniformNotFound { property } => {
+                write!(f, "Couldn't find Uniform for property {property}")
             }
         }
     }

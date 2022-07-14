@@ -4,7 +4,7 @@ use gl::types::{GLenum, GLuint};
 
 use crate::{
     generation_vec::GenerationVec,
-    renderer::{shader::ShaderStorage, GraphicsStorage, Shader},
+    renderer::{shader::ShaderStorage, Shader},
     RendererError,
 };
 

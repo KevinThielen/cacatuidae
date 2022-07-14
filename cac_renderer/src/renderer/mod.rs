@@ -9,7 +9,9 @@ mod render_target;
 pub use render_target::{ClearFlags, RenderTarget};
 
 mod shader;
-pub use shader::{ProgramStorage, Shader, ShaderProgram, ShaderStorage};
+pub use shader::{
+    ProgramStorage, Shader, ShaderProgram, ShaderStorage, Uniform, UniformDescription, UniformKind,
+};
 
 mod buffer;
 pub use buffer::{Buffer, BufferAttributes, BufferData, BufferStorage, BufferUsage};
@@ -19,7 +21,12 @@ pub use vertex_layout::{
     AttributeSemantic, LayoutStorage, VertexAttribute, VertexAttributeKind, VertexLayout,
 };
 
-use crate::Handle;
+mod material;
+pub use material::{Material, MaterialProperty, PropertyId, PropertyValue};
+
+use crate::{generation_vec::GenerationVec, Handle, RendererError};
+
+use self::material::MaterialData;
 
 /// Renderer abstraction
 ///
@@ -38,11 +45,46 @@ pub struct Renderer<T: Context> {
     pub layouts: T::LayoutStorage,
     pub shaders: T::ShaderStorage,
     pub programs: T::ProgramStorage,
+    materials: GenerationVec<Material, MaterialData>,
 }
 
-impl<T: Context> Renderer<T> {}
+impl<T: Context> Renderer<T> {
+    pub fn create_material(
+        &mut self,
+        program: Handle<ShaderProgram>,
+        properties: &[MaterialProperty],
+    ) -> Result<Handle<Material>, RendererError> {
+        if let Some(shader_program) = self.programs.get(program) {
+            let mut material = MaterialData {
+                program,
+                data: vec![0; shader_program.data_size() * 4],
+            };
 
-pub trait GraphicsStorage<K: Copy, V> {
-    fn get(&self, handle: Handle<K>) -> Option<&V>;
-    fn get_mut(&mut self, handle: Handle<K>) -> Option<&mut V>;
+            material.update(shader_program.uniforms(), properties);
+
+            Ok(self.materials.push(material))
+        } else {
+            Err(RendererError::ResourceNotFound {
+                resource: format!("Shaderprogram: {program:?}"),
+            })
+        }
+    }
+
+    pub fn use_material(&mut self, handle: Handle<Material>) {
+        if let Some(material) = self.materials.get(handle) {
+            if let Some(program) = self.programs.get_mut(material.program) {
+                program.set_uniform_data(&material.data);
+            }
+        }
+    }
+    pub fn get_material(&self) -> &MaterialData {
+        todo!()
+    }
 }
+
+//pub trait GraphicsStorage {
+//type Handle: Copy;
+//type Resource;
+//fn get(&self, handle: Self::Handle) -> Option<&Self::Resource>;
+//fn get_mut(&mut self, handle: Self::Handle) -> Option<&mut Self::Resource>;
+//}

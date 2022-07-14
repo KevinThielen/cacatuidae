@@ -1,4 +1,6 @@
-use super::{BufferStorage, LayoutStorage, Mesh, ProgramStorage, RenderTarget, ShaderStorage};
+use super::{
+    BufferStorage, LayoutStorage, Mesh, ProgramStorage, RenderTarget, ShaderProgram, ShaderStorage,
+};
 
 #[cfg(feature = "headless")]
 mod headless;

@@ -1,17 +1,39 @@
 use std::{cell::RefCell, fmt::Display};
 
-use crate::{BufferAttributes, Handle, RendererError};
+use crate::{BufferAttributes, Handle, Renderer, RendererError};
 
-pub trait LayoutStorage {
+use super::Context;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VertexLayout {}
+
+impl VertexLayout {
+    pub fn new<C: Context>(
+        ctx: &mut Renderer<C>,
+        buffer_attributes: &[BufferAttributes],
+    ) -> Result<Handle<Self>, RendererError> {
+        let mut vao = C::VertexLayout::new(ctx)?;
+        for buffer_attr in buffer_attributes {
+            if let Some(buffer) = ctx.buffers.get(buffer_attr.buffer) {
+                vao.set_buffer_attributes(buffer, &buffer_attr.attributes, buffer_attr.offset)?;
+            }
+        }
+        Ok(ctx.layouts.push(vao))
+    }
+}
+
+pub trait CreateVertexLayout: Sized {
     type Buffer;
 
-    fn new(
+    fn new<C: Context>(ctx: &mut Renderer<C>) -> Result<Self, RendererError>;
+
+    fn set_buffer_attributes(
         &mut self,
-        buffer_attributes: &[BufferAttributes<Self::Buffer>],
-    ) -> Result<Handle<VertexLayout>, RendererError>;
+        buffer: &Self::Buffer,
+        attributes: &[VertexAttribute],
+        offset: usize,
+    ) -> Result<(), RendererError>;
 }
-#[derive(Debug, Clone, Copy)]
-pub struct VertexLayout {}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AttributeSemantic {
@@ -35,7 +57,7 @@ impl Display for AttributeSemantic {
             AttributeSemantic::Tangent => "Tangent".to_string(),
             AttributeSemantic::Weights(n) => format!("Weights[{n}]"),
             AttributeSemantic::Joints(n) => format!("Joints[{n}]"),
-            AttributeSemantic::Custom(kind, n) => format!("Custom[{n}]"),
+            AttributeSemantic::Custom(kind, n) => format!("Custom[{n}]: {kind}"),
         };
 
         write!(f, "{name}: Loc:{:?}", self.location())
@@ -78,6 +100,15 @@ impl AttributeSemantic {
         }
     }
 
+    //TODO: False for now, but once a "high performance" set of default semantic kinds is added,
+    //this will allow us to reduce memory size for the attributes. For example, Normals don't need
+    //32 bits per channel and could do with like 10.
+    //Might even be better to tie it to the kind. But I don't believe this to become an actual issue
+    //in the forseeable future, so I just yolo it now.
+    pub fn normalized(&self) -> bool {
+        false
+    }
+
     pub fn location(&self) -> Option<u8> {
         DEFAULT_LOCATIONS.with(|f| {
             f.borrow()
@@ -93,14 +124,6 @@ impl AttributeSemantic {
     pub fn set_default_locations(locations: [Option<AttributeSemantic>; 16]) {
         DEFAULT_LOCATIONS.with(|f| *f.borrow_mut() = locations)
     }
-
-    pub fn update_default_location(semantic: Option<AttributeSemantic>, index: usize) {
-        if index >= 16 {
-            log::error!("Locations for Attribute Semantics must be < 16, tried to update location {{{index}}}");
-        } else {
-            todo!()
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -109,6 +132,17 @@ pub enum VertexAttributeKind {
     Vec2,
     Vec3,
     Vec4,
+}
+
+impl Display for VertexAttributeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VertexAttributeKind::F32 => write!(f, "F32"),
+            VertexAttributeKind::Vec2 => write!(f, "Vec2"),
+            VertexAttributeKind::Vec3 => write!(f, "Vec3"),
+            VertexAttributeKind::Vec4 => write!(f, "Vec4"),
+        }
+    }
 }
 
 impl VertexAttributeKind {

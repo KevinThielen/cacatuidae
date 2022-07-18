@@ -88,6 +88,7 @@ impl From<(f32, f32, f32, f32)> for Color8 {
 /// Color struct with 32 bits per channel
 /// Internal representation is a linear color space
 #[derive(Debug, PartialEq, Copy, Clone)]
+#[repr(C)]
 pub struct Color32 {
     r: f32,
     g: f32,

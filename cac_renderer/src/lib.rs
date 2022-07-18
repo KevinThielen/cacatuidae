@@ -11,13 +11,12 @@ pub use error::RendererError;
 mod renderer;
 pub use renderer::{
     AttributeSemantic, Backend, Buffer, BufferAttributes, BufferData, BufferStorage, BufferUsage,
-    ClearFlags, LayoutStorage, MaterialProperty, Mesh, Primitive, ProgramStorage, PropertyId,
-    PropertyValue, RenderTarget, Renderer, ShaderStorage, VertexAttribute, VertexAttributeKind,
-    VertexLayout,
+    ClearFlags, Material, MaterialProperty, Mesh, Primitive, ProgramStorage, PropertyId,
+    PropertyValue, RenderTarget, Renderer, Shader, ShaderProgram, Texture, VertexAttribute,
+    VertexAttributeKind, VertexLayout,
 };
 
 mod generation_vec;
 pub use generation_vec::Handle;
 
-mod math;
-pub use math::*;
+pub mod math;

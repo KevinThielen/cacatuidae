@@ -9,24 +9,26 @@ mod render_target;
 pub use render_target::{ClearFlags, RenderTarget};
 
 mod shader;
-pub use shader::{
-    ProgramStorage, Shader, ShaderProgram, ShaderStorage, Uniform, UniformDescription, UniformKind,
-};
+pub use shader::{ProgramStorage, Shader, ShaderProgram, Uniform, UniformDescription, UniformKind};
 
 mod buffer;
-pub use buffer::{Buffer, BufferAttributes, BufferData, BufferStorage, BufferUsage};
+pub use buffer::{Buffer, BufferAttributes, BufferData, BufferStorage, BufferUsage, CreateBuffer};
 
 mod vertex_layout;
 pub use vertex_layout::{
-    AttributeSemantic, LayoutStorage, VertexAttribute, VertexAttributeKind, VertexLayout,
+    AttributeSemantic, CreateVertexLayout, VertexAttribute, VertexAttributeKind, VertexLayout,
 };
 
 mod material;
 pub use material::{Material, MaterialProperty, PropertyId, PropertyValue};
 
-use crate::{generation_vec::GenerationVec, Handle, RendererError};
+mod draw_list;
+pub use draw_list::DrawList;
 
-use self::material::MaterialData;
+mod texture;
+pub use texture::Texture;
+
+use crate::{generation_vec::GenerationVec, Handle, RendererError};
 
 /// Renderer abstraction
 ///
@@ -41,11 +43,11 @@ use self::material::MaterialData;
 
 pub struct Renderer<T: Context> {
     context: T::Context,
-    pub buffers: T::BufferStorage,
-    pub layouts: T::LayoutStorage,
-    pub shaders: T::ShaderStorage,
-    pub programs: T::ProgramStorage,
-    materials: GenerationVec<Material, MaterialData>,
+    pub buffers: GenerationVec<Buffer, T::Buffer>,
+    pub layouts: GenerationVec<VertexLayout, T::VertexLayout>,
+    pub shaders: GenerationVec<Shader, T::Shader>,
+    pub programs: GenerationVec<ShaderProgram, T::ShaderProgram>,
+    materials: GenerationVec<Material, Material>,
 }
 
 impl<T: Context> Renderer<T> {
@@ -55,7 +57,7 @@ impl<T: Context> Renderer<T> {
         properties: &[MaterialProperty],
     ) -> Result<Handle<Material>, RendererError> {
         if let Some(shader_program) = self.programs.get(program) {
-            let mut material = MaterialData {
+            let mut material = Material {
                 program,
                 data: vec![0; shader_program.data_size() * 4],
             };
@@ -77,8 +79,13 @@ impl<T: Context> Renderer<T> {
             }
         }
     }
-    pub fn get_material(&self) -> &MaterialData {
-        todo!()
+
+    pub fn update_material(&mut self, handle: Handle<Material>, properties: &[MaterialProperty]) {
+        if let Some(material) = self.materials.get_mut(handle) {
+            if let Some(shader_program) = self.programs.get(material.program) {
+                material.update(shader_program.uniforms(), properties);
+            }
+        }
     }
 }
 

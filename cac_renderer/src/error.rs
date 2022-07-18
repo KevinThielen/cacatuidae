@@ -1,4 +1,6 @@
-use crate::{renderer::PropertyId, AttributeSemantic};
+use std::error::Error;
+
+use crate::AttributeSemantic;
 
 #[derive(Debug)]
 /// Possible Errors returned by the Renderer.
@@ -35,7 +37,7 @@ pub enum RendererError {
     },
 }
 
-impl std::error::Error for RendererError {}
+impl Error for RendererError {}
 
 impl std::fmt::Display for RendererError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -54,7 +56,7 @@ impl std::fmt::Display for RendererError {
                 location,
                 max,
                 semantic,
-            } => write!(f, "{semantic} >= {max}"),
+            } => write!(f, "{location} >= {max} for {semantic}"),
             RendererError::AttributeHasNoLocation { semantic } => write!(f, "{semantic}"),
             RendererError::FailedToCompileShader { error } => {
                 write!(f, "Failed to compile shader: {error}")

@@ -5,13 +5,26 @@ use gl::types::{GLchar, GLuint};
 use crate::{
     generation_vec::GenerationVec,
     renderer::{
-        shader::{ProgramStorage, Uniform},
+        shader::{CreateShaderProgram, ProgramStorage, Uniform},
         ShaderProgram, UniformDescription, UniformKind,
     },
     Handle, RendererError,
 };
 
 use super::GLShader;
+
+impl CreateShaderProgram for GLShaderProgram {
+    type VertexShader = GLShader;
+
+    type FragmentShader = GLShader;
+
+    fn new(
+        vertex_shader: &Self::VertexShader,
+        fragment_shader: &Self::FragmentShader,
+    ) -> Result<Self, RendererError> {
+        Self::new(vertex_shader, fragment_shader)
+    }
+}
 
 impl ProgramStorage for GenerationVec<ShaderProgram, GLShaderProgram> {
     type VertexShader = GLShader;
@@ -56,7 +69,32 @@ impl Uniform for GLShaderProgram {
         &self.uniforms
     }
 
+    fn set_uniform_f32(&mut self, location: u32, value: &[f32]) {
+        if let Some(uniform) = self
+            .uniforms
+            .iter()
+            .find(|uniform| uniform.location == location)
+        {
+            let location = location as i32;
+            let count = uniform.count as i32;
+            let value = value.as_ptr();
+            unsafe {
+                match uniform.kind {
+                    UniformKind::F32 => gl::Uniform1fv(location, count, value),
+                    UniformKind::Mat4 => gl::UniformMatrix4fv(location, count, gl::FALSE, value),
+                    UniformKind::Mat3 => gl::UniformMatrix3fv(location, count, gl::FALSE, value),
+                    UniformKind::Mat2 => gl::UniformMatrix2fv(location, count, gl::FALSE, value),
+                    UniformKind::Vec4 => gl::Uniform4fv(location, count, value),
+                    UniformKind::Vec3 => gl::Uniform3fv(location, count, value),
+                    UniformKind::Vec2 => gl::Uniform2fv(location, count, value),
+                    UniformKind::Sampler2D => todo!(),
+                }
+            }
+        }
+    }
+
     fn set_uniform_data(&mut self, data: &[u8]) {
+        self.bind();
         for uniform in &self.uniforms {
             let (location, count, value) = (
                 uniform.location as i32,
@@ -150,6 +188,12 @@ impl GLShaderProgram {
         }
     }
 
+    fn bind(&mut self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
+    }
+
     fn get_uniforms(id: GLuint) -> (Vec<UniformDescription>, usize) {
         let mut uniform_count = 0;
         unsafe {
@@ -162,7 +206,7 @@ impl GLShaderProgram {
         let mut data_size = 0;
         let mut uniforms = Vec::with_capacity(uniform_count as usize);
 
-        let mut texture_index = 0;
+        let mut _texture_index = 0;
         const BUFFER_SIZE: usize = 256;
 
         //go through each uniform and read the data

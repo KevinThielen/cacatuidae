@@ -1,18 +1,22 @@
+use crate::{Handle, MaterialProperty};
+
 use super::{
-    BufferStorage, LayoutStorage, Mesh, ProgramStorage, RenderTarget, ShaderProgram, ShaderStorage,
+    buffer::CreateBuffer,
+    shader::{CreateShader, CreateShaderProgram},
+    vertex_layout::CreateVertexLayout,
+    Material, Mesh, RenderTarget, Uniform,
 };
 
-#[cfg(feature = "headless")]
-mod headless;
-#[cfg(feature = "opengl")]
+pub mod headless;
 pub mod opengl;
 
 pub trait Context {
     type Context;
-    type BufferStorage: BufferStorage;
-    type LayoutStorage: LayoutStorage;
-    type ShaderStorage: ShaderStorage;
-    type ProgramStorage: ProgramStorage;
+    type Buffer: CreateBuffer;
+    type VertexLayout: CreateVertexLayout<Buffer = Self::Buffer>;
+    type Shader: CreateShader;
+    type ShaderProgram: CreateShaderProgram<VertexShader = Self::Shader, FragmentShader = Self::Shader>
+        + Uniform;
 }
 
 /// Renderer Backend that is used by the [Renderer][crate::Renderer]
@@ -27,7 +31,12 @@ pub trait Backend {
 
     fn screen_target(&mut self) -> &mut dyn RenderTarget;
 
-    fn draw(&mut self, mesh: Mesh);
+    fn draw(
+        &mut self,
+        mesh: Mesh,
+        material: Handle<Material>,
+        instance_properties: &[MaterialProperty],
+    );
 
     fn update(&mut self);
 }

@@ -1,9 +1,12 @@
 use gl::types::{GLenum, GLuint};
 
 use crate::{
-    generation_vec::GenerationVec, renderer::buffer::BufferStorage, Buffer, BufferUsage, Handle,
-    RendererError,
+    generation_vec::GenerationVec,
+    renderer::buffer::{BufferStorage, CreateBuffer},
+    Buffer, BufferUsage, Handle, RendererError,
 };
+
+use super::OpenGLContext;
 
 #[derive(Debug)]
 pub struct GLBuffer {
@@ -11,7 +14,17 @@ pub struct GLBuffer {
     id: GLuint,
 }
 
-impl BufferStorage for GenerationVec<Buffer, GLBuffer> {
+impl CreateBuffer for GLBuffer {
+    fn with_vertex<T>(data: &[T], usage: BufferUsage) -> Result<Self, RendererError> {
+        Self::with_vertex(data, usage)
+    }
+
+    fn with_index<T>(data: &[T], usage: BufferUsage) -> Result<Self, RendererError> {
+        Self::with_index(data, usage)
+    }
+}
+
+impl BufferStorage<OpenGLContext> for GenerationVec<Buffer, GLBuffer> {
     fn new_vertex<T>(
         &mut self,
         data: &[T],
@@ -30,6 +43,10 @@ impl BufferStorage for GenerationVec<Buffer, GLBuffer> {
         let gl_buffer = GLBuffer::with_index(data, usage)?;
 
         Ok(self.push(gl_buffer))
+    }
+
+    fn push(&mut self, buffer: GLBuffer) -> Handle<Buffer> {
+        self.push(buffer)
     }
 }
 

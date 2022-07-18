@@ -1,30 +1,22 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 use gl::types::{GLenum, GLuint};
 
-use crate::{
-    generation_vec::GenerationVec,
-    renderer::{shader::ShaderStorage, Shader},
-    RendererError,
-};
-
-impl ShaderStorage for GenerationVec<Shader, GLShader> {
-    fn new_vertex(&mut self, source: &str) -> Result<crate::Handle<Shader>, RendererError> {
-        let shader = GLShader::new_vertex(source)?;
-
-        Ok(self.push(shader))
-    }
-
-    fn new_fragment(&mut self, source: &str) -> Result<crate::Handle<Shader>, RendererError> {
-        let shader = GLShader::new_fragment(source)?;
-
-        Ok(self.push(shader))
-    }
-}
+use crate::{renderer::shader::CreateShader, RendererError};
 
 pub struct GLShader {
     pub(super) id: GLuint,
     pub(super) kind: GLenum,
+}
+
+impl CreateShader for GLShader {
+    fn with_vertex(source: &str) -> Result<Self, RendererError> {
+        Self::with_kind(gl::VERTEX_SHADER, source)
+    }
+
+    fn with_fragment(source: &str) -> Result<Self, RendererError> {
+        Self::with_kind(gl::FRAGMENT_SHADER, source)
+    }
 }
 
 impl Drop for GLShader {
@@ -36,14 +28,6 @@ impl Drop for GLShader {
 }
 
 impl GLShader {
-    pub(super) fn new_vertex(source: &str) -> Result<Self, RendererError> {
-        Self::with_kind(gl::VERTEX_SHADER, source)
-    }
-
-    pub(super) fn new_fragment(source: &str) -> Result<Self, RendererError> {
-        Self::with_kind(gl::FRAGMENT_SHADER, source)
-    }
-
     fn with_kind(kind: GLenum, source: &str) -> Result<Self, RendererError> {
         let gl_shader = Self {
             id: unsafe { gl::CreateShader(kind) },

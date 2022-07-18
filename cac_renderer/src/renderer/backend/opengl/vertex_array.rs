@@ -1,30 +1,29 @@
 use gl::types::{GLenum, GLint, GLuint};
 
 use crate::{
-    generation_vec::GenerationVec, renderer::LayoutStorage, RendererError, VertexAttribute,
-    VertexLayout,
+    renderer::{Context, CreateVertexLayout},
+    Renderer, RendererError, VertexAttribute,
 };
 
 use super::buffer::GLBuffer;
 
-impl LayoutStorage for GenerationVec<VertexLayout, Vao> {
+impl CreateVertexLayout for Vao {
     type Buffer = GLBuffer;
 
-    fn new(
+    fn new<C: Context>(_ctx: &mut Renderer<C>) -> Result<Self, RendererError> {
+        let vao = Vao::new();
+
+        Ok(vao)
+    }
+
+    fn set_buffer_attributes(
         &mut self,
-        buffer_attributes: &[crate::BufferAttributes<Self::Buffer>],
-    ) -> Result<crate::Handle<VertexLayout>, RendererError> {
-        let mut vao = Vao::new();
-
-        for buffer_attr in buffer_attributes {
-            vao.set_buffer_attributes(
-                &buffer_attr.buffer,
-                buffer_attr.attributes,
-                buffer_attr.offset,
-            )?;
-        }
-
-        Ok(self.push(vao))
+        buffer: &Self::Buffer,
+        attributes: &[VertexAttribute],
+        offset: usize,
+    ) -> Result<(), RendererError> {
+        self.set_buffer_attributes(buffer, attributes, offset)?;
+        Ok(())
     }
 }
 
@@ -123,6 +122,8 @@ impl Vao {
 
 impl Drop for Vao {
     fn drop(&mut self) {
-        if self.id > 0 {}
+        if self.id > 0 {
+            unsafe { gl::DeleteVertexArrays(1, &self.id) }
+        }
     }
 }

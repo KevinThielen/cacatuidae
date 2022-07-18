@@ -1,13 +1,40 @@
 use std::marker::PhantomData;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 /// Resource handle that is returned by the [Renderer] whenever a graphics resource, like a mesh,
 /// shader or texture is created. It is similar to a normal Vec, with the difference that it
 /// carries the generation data, in case a resource is released and another take the spot.
-pub struct Handle<T: Copy> {
+pub struct Handle<T> {
     pub(crate) index: usize,
     pub(crate) generation: usize,
     phantom: PhantomData<T>,
+}
+
+impl<T> Clone for Handle<T> {
+    fn clone(&self) -> Self {
+        Self {
+            index: self.index,
+            generation: self.generation,
+            phantom: PhantomData,
+        }
+    }
+}
+impl<T> Copy for Handle<T> {}
+
+impl<T> Handle<T> {
+    pub fn new() -> Self {
+        Self {
+            index: 0,
+            generation: 0,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: Copy + Eq> Default for Handle<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug)]
@@ -17,13 +44,13 @@ struct Resource<R> {
 }
 
 #[derive(Debug)]
-pub struct GenerationVec<K: Copy, V> {
+pub struct GenerationVec<K, V> {
     values: Vec<Resource<V>>,
     free: Vec<usize>,
     phantom: PhantomData<K>,
 }
 
-impl<K: Copy, V> Default for GenerationVec<K, V> {
+impl<K, V> Default for GenerationVec<K, V> {
     fn default() -> Self {
         Self {
             values: Vec::with_capacity(10),
@@ -33,7 +60,7 @@ impl<K: Copy, V> Default for GenerationVec<K, V> {
     }
 }
 
-impl<K: Copy, V> GenerationVec<K, V> {
+impl<K, V> GenerationVec<K, V> {
     /// Constructor
     pub fn new() -> Self {
         Self::default()
@@ -106,14 +133,14 @@ impl<K: Copy, V> GenerationVec<K, V> {
         } else {
             let resource = Resource::<V> {
                 value: Some(value),
-                generation: 0,
+                generation: 1,
             };
 
             self.values.insert(index, resource);
 
             Handle::<K> {
                 index,
-                generation: 0,
+                generation: 1,
                 phantom: PhantomData,
             }
         }
@@ -151,7 +178,7 @@ mod test {
         let none_count = gen_vec.values.iter().filter(|v| v.value == None).count();
         assert_eq!(none_count, 5);
         let next_handle = gen_vec.push(5);
-        assert_eq!(next_handle.generation, 1);
+        assert_eq!(next_handle.generation, 2);
         assert_eq!(next_handle.index, 4);
 
         assert_eq!(*gen_vec.get(next_handle).unwrap(), 5);
@@ -164,7 +191,7 @@ mod test {
         let handle = gen_vec.push(some_resource);
 
         assert!(handle.index == 0);
-        assert!(handle.generation == 0);
+        assert!(handle.generation == 1);
 
         let resource = gen_vec.get(handle);
         assert_eq!(resource.unwrap(), &"farty");
@@ -193,7 +220,7 @@ mod test {
         let no_handle = gen_vec.get(handle);
         assert_eq!(no_handle, None);
 
-        assert_eq!(new_handle.generation, 1);
+        assert_eq!(new_handle.generation, 2);
         assert_eq!(new_handle.index, 0);
     }
 
